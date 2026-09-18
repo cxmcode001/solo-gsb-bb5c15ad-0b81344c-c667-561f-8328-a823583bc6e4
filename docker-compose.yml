@@ -1,0 +1,31 @@
+services:
+  tail-sampler:
+    build: .
+    image: trace-tail-sampler:latest
+    container_name: trace-tail-sampler
+    ports:
+      - "8080:8080"
+    environment:
+      # SQLite database file (inside the mounted volume)
+      TS_DB_PATH: /data/tailsampling.db
+      TS_HOST: 0.0.0.0
+      TS_PORT: "8080"
+      # Quiet window: a trace is complete after this many seconds idle
+      TS_QUIET_SECONDS: "20"
+      # Sampling budget for ordinary traces per UTC minute
+      TS_SAMPLE_BUDGET_PER_MINUTE: "100"
+      # Traces with duration >= this many milliseconds are always kept
+      TS_SLOW_THRESHOLD_MS: "1000"
+      TS_TICK_SECONDS: "1"
+    volumes:
+      - tail-sampler-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  tail-sampler-data:
